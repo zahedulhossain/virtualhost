@@ -7,11 +7,12 @@ action=$1
 domain=$2
 rootDir=$3
 owner=$(who am i | awk '{print $1}')
+apacheUser=$(ps -ef | egrep '(httpd|apache2|apache)' | grep -v root | head -n1 | awk '{print $1}')
 email='webmaster@localhost'
-sitesEnable='/etc/httpd/conf/sites-enabled/'
-sitesAvailable='/etc/httpd/conf/sites-available/'
-userDir='/srv/http/'
-
+sitesEnabled='/etc/apache2/sites-enabled/'
+sitesAvailable='/etc/apache2/sites-available/'
+userDir='/var/www/'
+sitesAvailabledomain=$sitesAvailable$domain.conf
 
 ### don't modify from here unless you know what you are doing ####
 
@@ -22,27 +23,26 @@ fi
 
 if [ "$action" != 'create' ] && [ "$action" != 'delete' ]
 	then
-		echo $"You need to give an option (create or delete) -- Lower-case only"
+		echo $"You need to prompt for action (create or delete) -- Lower-case only"
 		exit 1;
 fi
 
 while [ "$domain" == "" ]
 do
-	echo -e $"Please provide domain. e.g. app.local, home.test"
+	echo -e $"Please provide domain. e.g.dev,staging"
 	read domain
 done
 
 if [ "$rootDir" == "" ]; then
-	rootDir=${domain%.*}
+	rootDir=${domain//./}
 fi
 
-### if root dir starts with '/', don't use /srv/http as default starting point
+### if root dir starts with '/', don't use /var/www as default starting point
 if [[ "$rootDir" =~ ^/ ]]; then
 	userDir=''
 fi
 
 rootDir=$userDir$rootDir
-sitesAvailabledomain=$sitesAvailable$domain.conf
 
 if [ "$action" == 'create' ]
 	then
@@ -74,19 +74,21 @@ if [ "$action" == 'create' ]
 			ServerAdmin $email
 			ServerName $domain
 			ServerAlias $domain
-			DocumentRoot $rootDir/public
-
-			<Directory $rootDir/public>
+			DocumentRoot $rootDir
+			<Directory />
+				AllowOverride All
+			</Directory>
+			<Directory $rootDir>
 				Options Indexes FollowSymLinks MultiViews
 				AllowOverride all
 				Require all granted
 			</Directory>
-			ErrorLog /var/log/httpd/$domain-error.log
+			ErrorLog /var/log/apache2/$domain-error.log
 			LogLevel error
-			CustomLog /var/log/httpd/$domain-access.log combined
+			CustomLog /var/log/apache2/$domain-access.log combined
 		</VirtualHost>" > $sitesAvailabledomain
 		then
-			echo -e $"ERROR creating $domain file"
+			echo -e $"There is an ERROR creating $domain file"
 			exit;
 		else
 			echo -e $"\nNew Virtual Host Created\n"
@@ -101,17 +103,33 @@ if [ "$action" == 'create' ]
 			echo -e $"Host added to /etc/hosts file \n"
 		fi
 
+		### Add domain in /mnt/c/Windows/System32/drivers/etc/hosts (Windows Subsytem for Linux)
+		if [ -e /mnt/c/Windows/System32/drivers/etc/hosts ]
+		then
+			if ! echo -e "\r127.0.0.1       $domain" >> /mnt/c/Windows/System32/drivers/etc/hosts
+			then
+				echo $"ERROR: Not able to write in /mnt/c/Windows/System32/drivers/etc/hosts (Hint: Try running Bash as administrator)"
+			else
+				echo -e $"Host added to /mnt/c/Windows/System32/drivers/etc/hosts file \n"
+			fi
+		fi
+
 		if [ "$owner" == "" ]; then
-			chown -R $(whoami):$(whoami) $rootDir
+			iam=$(whoami)
+			if [ "$iam" == "root" ]; then
+				chown -R $apacheUser:$apacheUser $rootDir
+			else
+				chown -R $iam:$iam $rootDir
+			fi
 		else
 			chown -R $owner:$owner $rootDir
 		fi
 
 		### enable website
-		cp $sitesAvailabledomain $sitesEnable/$domain.conf
+		a2ensite $domain
 
 		### restart Apache
-        systemctl restart httpd
+		/etc/init.d/apache2 reload
 
 		### show the finished message
 		echo -e $"Complete! \nYou now have a new Virtual Host \nYour new host is: http://$domain \nAnd its located at $rootDir"
@@ -126,11 +144,18 @@ if [ "$action" == 'create' ]
 			newhost=${domain//./\\.}
 			sed -i "/$newhost/d" /etc/hosts
 
+			### Delete domain in /mnt/c/Windows/System32/drivers/etc/hosts (Windows Subsytem for Linux)
+			if [ -e /mnt/c/Windows/System32/drivers/etc/hosts ]
+			then
+				newhost=${domain//./\\.}
+				sed -i "/$newhost/d" /mnt/c/Windows/System32/drivers/etc/hosts
+			fi
+
 			### disable website
-			rm -f $sitesEnable/$domain.conf
+			a2dissite $domain
 
 			### restart Apache
-			systemctl restart httpd
+			/etc/init.d/apache2 reload
 
 			### Delete virtual host rules files
 			rm $sitesAvailabledomain

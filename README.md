@@ -1,7 +1,7 @@
 Virtualhost Manage Script
 ===========
 
-Bash Script to allow create or delete apache/nginx virtual hosts on Ubuntu on a quick way.
+Bash Script to create or delete apache/nginx virtual hosts for Laravel app on Arch Linux.
 
 ## Installation ##
 
@@ -23,9 +23,9 @@ $ sudo cp /path/to/virtualhost.sh /usr/local/bin/virtualhost
 
 ```bash
 $ cd /usr/local/bin
-$ wget -O virtualhost https://raw.githubusercontent.com/RoverWire/virtualhost/master/virtualhost.sh
+$ wget -O virtualhost https://raw.githubusercontent.com/zahedulhossain/virtualhost/master/virtualhost.sh
 $ chmod +x virtualhost
-$ wget -O virtualhost-nginx https://raw.githubusercontent.com/RoverWire/virtualhost/master/virtualhost-nginx.sh
+$ wget -O virtualhost-nginx https://raw.githubusercontent.com/zahedulhossain/virtualhost/master/virtualhost-nginx.sh
 $ chmod +x virtualhost-nginx
 ```
 
@@ -48,23 +48,23 @@ $ sudo virtualhost [create | delete] [domain] [optional host_dir]
 to create a new virtual host:
 
 ```bash
-$ sudo virtualhost create mysite.dev
+$ sudo virtualhost create mysite.lan
 ```
 to create a new virtual host with custom directory name:
 
 ```bash
-$ sudo virtualhost create anothersite.dev my_dir
+$ sudo virtualhost create anothersite.lan my_dir
 ```
 to delete a virtual host
 
 ```bash
-$ sudo virtualhost delete mysite.dev
+$ sudo virtualhost delete mysite.lan
 ```
 
 to delete a virtual host with custom directory name:
 
 ```
-$ sudo virtualhost delete anothersite.dev my_dir
+$ sudo virtualhost delete anothersite.lan my_dir
 ```
 ### Localization
 
