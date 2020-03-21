@@ -3,6 +3,16 @@ Virtualhost Manage Script
 
 Bash Script to create or delete apache/nginx virtual hosts for Laravel app on Arch Linux.
 
+## Prerequisite ##
+
+To fully automate the process on Arch Linux you need to:
+1. Create a sites-enabled/ and sites-available/ directory in /etc/httpd/conf/
+2. Add this line at the botom of /etc/httpd/conf/httpd.conf file 
+```bash
+'Include conf/sites-enabled/*.conf'
+```
+
+
 ## Installation ##
 
 1. Download the script
