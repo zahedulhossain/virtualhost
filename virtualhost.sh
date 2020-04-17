@@ -1,13 +1,16 @@
 #!/bin/bash
-### Set Language
-TEXTDOMAIN=virtualhost
+usage="usage: virtualhost [option]
+
+-c, --create      Create new virtualhost configurations
+-d, --delete      Delete existing virtualhost configurations"
 
 ### Set default parameters
-action=$1
-domain=$2
-rootDir=$3
-owner=$(who am i | awk '{print $1}')
-email='webmaster@localhost'
+args=("-c" '--create' '-d' '--delete') 
+action="$1"
+domain="$2"
+rootDir="$3"
+owner=$(whoami)
+email='webmaster'
 sitesEnable='/etc/httpd/conf/sites-enabled/'
 sitesAvailable='/etc/httpd/conf/sites-available/'
 userDir='/srv/http/'
@@ -15,144 +18,148 @@ userDir='/srv/http/'
 
 ### don't modify from here unless you know what you are doing ####
 
-if [ "$(whoami)" != 'root' ]; then
-	echo $"You have no permission to run $0 as non-root user. Use sudo"
-		exit 1;
+if [ "$owner" != 'root' ]; then
+  echo $"You don't have permission to run $0 as $owner, use sudo"
+  exit 1;
 fi
 
-if [ "$action" != 'create' ] && [ "$action" != 'delete' ]
-	then
-		echo $"You need to give an option (create or delete) -- Lower-case only"
-		exit 1;
+### check if the argument is valid
+if [[ ! " ${args[@]} " =~ " $action " ]]; then
+  echo -e "$usage"
+  exit 1;
 fi
 
+### set domain name
 while [ "$domain" == "" ]
 do
-	echo -e $"Please provide domain. e.g. app.local, home.test"
-	read domain
+  read -p "Provide a domain name, e.g. app.local, app.test $(echo $'\n> ')" domain
 done
 
+### set document root
 if [ "$rootDir" == "" ]; then
-	rootDir=${domain%.*}
+  rootDir=${domain%.*}
 fi
 
 ### if root dir starts with '/', don't use /srv/http as default starting point
 if [[ "$rootDir" =~ ^/ ]]; then
-	userDir=''
+  userDir=''
 fi
 
 rootDir=$userDir$rootDir
-sitesAvailabledomain=$sitesAvailable$domain.conf
+domainCFG=$sitesAvailable$domain.conf
 
-if [ "$action" == 'create' ]
-	then
-		### check if domain already exists
-		if [ -e $sitesAvailabledomain ]; then
-			echo -e $"This domain already exists.\nPlease Try Another one"
-			exit;
-		fi
+if [ "$action" == '-c' ] || [ "$action" == '--create' ]; then
+  ### check if domain config already exists
+  if [ -e "$domainCFG" ]; then
+    echo -e $"\nDomain config already exists in $sitesAvailable \n"
+    echo -e $"Existing domains: \n$(ls $sitesAvailable) \n"
+    echo -e $"Try again \n"
+    exit;
+  fi
 
-		### check if directory exists or not
-		if ! [ -d $rootDir ]; then
-			### create the directory
-			mkdir $rootDir
-			### give permission to root dir
-			chmod 755 $rootDir
-			### write test file in the new domain dir
-			if ! echo "<?php echo phpinfo(); ?>" > $rootDir/phpinfo.php
-			then
-				echo $"ERROR: Not able to write in file $rootDir/phpinfo.php. Please check permissions"
-				exit;
-			else
-				echo $"Added content to $rootDir/phpinfo.php"
-			fi
-		fi
+  ### check if directory exists or not
+  if ! [ -d "$rootDir" ]; then
+    ### create the directory
+    echo -e $"\nCreated $rootDir"
+    mkdir "$rootDir"
+    ### give permission to root dir
+    chmod 755 "$rootDir"
+    ### write test file in the new domain dir
+    if ! echo "<?php echo phpinfo(); ?>" > "$rootDir"/info.php; then
+      echo $"ERROR: Not able to write in file $rootDir/info.php. Please check permissions"
+      exit;
+    else
+      echo -e $"\nAdded example content to $rootDir/info.php"
+    fi
+  fi
 
-		### create virtual host rules file
-		if ! echo "
-		<VirtualHost *:80>
-			ServerAdmin $email
-			ServerName $domain
-			ServerAlias $domain
-			DocumentRoot $rootDir/public
+### create virtual host config file
+configTemplate="
+<VirtualHost *:80>
+    ServerAdmin $email@$domain
+    ServerName $domain
+    ServerAlias $domain
+    DocumentRoot $rootDir
 
-			<Directory $rootDir/public>
-				Options Indexes FollowSymLinks MultiViews
-				AllowOverride all
-				Require all granted
-			</Directory>
-			ErrorLog /var/log/httpd/$domain-error.log
-			LogLevel error
-			CustomLog /var/log/httpd/$domain-access.log combined
-		</VirtualHost>" > $sitesAvailabledomain
-		then
-			echo -e $"ERROR creating $domain file"
-			exit;
-		else
-			echo -e $"\nNew Virtual Host Created\n"
-		fi
+    <Directory $rootDir>
+        Options Indexes FollowSymLinks MultiViews
+        AllowOverride all
+        Require all granted
+    </Directory>
+    ErrorLog /var/log/httpd/$domain-error.log
+    LogLevel error
+    CustomLog /var/log/httpd/$domain-access.log combined
+</VirtualHost>"
 
-		### Add domain in /etc/hosts
-		if ! echo "127.0.0.1	$domain" >> /etc/hosts
-		then
-			echo $"ERROR: Not able to write in /etc/hosts"
-			exit;
-		else
-			echo -e $"Host added to /etc/hosts file \n"
-		fi
+  if ! echo -e "$configTemplate" > "$domainCFG"; then
+    echo -e $"ERROR creating $domain file"
+    exit;
+  else
+    echo -e $"\nAdded config file in $sitesAvailable \n"
+  fi
 
-		if [ "$owner" == "" ]; then
-			chown -R $(whoami):$(whoami) $rootDir
-		else
-			chown -R $owner:$owner $rootDir
-		fi
+  ### Add domain in /etc/hosts
+  if ! echo "127.0.0.1	$domain" >> /etc/hosts; then
+    echo $"ERROR: Not able to write in /etc/hosts"
+    exit;
+  else
+    echo -e $"Hostname added to /etc/hosts file \n"
+  fi
 
-		### enable website
-		cp $sitesAvailabledomain $sitesEnable/$domain.conf
+  ### set ownership
+  chown -R "$owner":"$owner" "$rootDir"
 
-		### restart Apache
-        systemctl restart httpd
+  ### enable website
+  echo -e $"Site enabled\n"
+  cp "$domainCFG" "$sitesEnable/$domain.conf"
 
-		### show the finished message
-		echo -e $"Complete! \nYou now have a new Virtual Host \nYour new host is: http://$domain \nAnd its located at $rootDir"
-		exit;
-	else
-		### check whether domain already exists
-		if ! [ -e $sitesAvailabledomain ]; then
-			echo -e $"This domain does not exist.\nPlease try another one"
-			exit;
-		else
-			### Delete domain in /etc/hosts
-			newhost=${domain//./\\.}
-			sed -i "/$newhost/d" /etc/hosts
+  ### restart Apache
+  echo -e $"Apache restarted \n"
+  systemctl restart httpd
 
-			### disable website
-			rm -f $sitesEnable/$domain.conf
+  ### show the finished message
+  echo -e $"Complete! \nYou now have a new Virtual Host at: http://$domain \nAnd its located under $rootDir \n"
+  exit;
 
-			### restart Apache
-			systemctl restart httpd
+else
+  ### check whether domain config exists
+  if ! [ -e "$domainCFG" ]; then
+    echo -e $"\nDomain config does not exist in $sitesAvailable \n"
+    echo -e $"Existing domains: \n$(ls $sitesAvailable) \n"
+    echo -e $"Try again \n"
+    exit;
+  else
+    ### Delete domain in /etc/hosts
+    newhost=${domain//./\\.}
+    sed -i "/$newhost/d" /etc/hosts
 
-			### Delete virtual host rules files
-			rm $sitesAvailabledomain
-		fi
+    ### disable website
+    rm -f "$sitesEnable/$domain.conf"
 
-		### check if directory exists or not
-		if [ -d $rootDir ]; then
-			echo -e $"Delete host root directory ? (y/n)"
-			read deldir
+    ### restart Apache
+    systemctl restart httpd
 
-			if [ "$deldir" == 'y' -o "$deldir" == 'Y' ]; then
-				### Delete the directory
-				rm -rf $rootDir
-				echo -e $"Directory deleted"
-			else
-				echo -e $"Host directory conserved"
-			fi
-		else
-			echo -e $"Host directory not found. Ignored"
-		fi
+    ### Delete virtual host config files
+    rm "$domainCFG"
+  fi
 
-		### show the finished message
-		echo -e $"Complete!\nYou just removed Virtual Host $domain"
-		exit 0;
+  ### check if directory exists or not
+  if [ -d "$rootDir" ]; then
+    echo -e $"Delete document root directory ? (y/n)"
+    read -r deldir
+
+    if [ "$deldir" == 'y' ] || [ "$deldir" == 'Y' ]; then
+      ### Delete the directory
+      rm -rf "$rootDir"
+      echo -e $"\nDirectory deleted \n"
+    else
+      echo -e $"\nDirectory conserved \n"
+    fi
+  else
+     echo -e $"\nDirectory not found. Ignored \n"
+  fi
+
+  ### show the finished message
+  echo -e $"Complete!\nYou just removed Virtual Host $domain \n"
+  exit 0;
 fi

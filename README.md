@@ -1,13 +1,20 @@
-Virtualhost Manage Script
+
+This project is forked from [RoverWire/virtualhost](https://github.com/RoverWire/virtualhost).  
+If you're on Ubuntu then definitely use Roverwire's virtualhost script.  
+I forked this to make it more usable for Arch Linux.
+
+---
+
+Virtualhost Manager
 ===========
 
-Bash Script to create or delete apache/nginx virtual hosts for Laravel app on Arch Linux.
+Bash Script to create or delete apache/nginx virtual hosts on Arch Linux.
 
 ## Prerequisite ##
 
 To fully automate the process on Arch Linux you need to:
-1. Create a sites-enabled/ and sites-available/ directory in /etc/httpd/conf/
-2. Add this line at the botom of /etc/httpd/conf/httpd.conf file 
+1. Create a sites-enabled/ and sites-available/ directory under /etc/httpd/conf/
+2. Add this line at the bottom of /etc/httpd/conf/httpd.conf file 
 ```bash
 'Include conf/sites-enabled/*.conf'
 ```
@@ -16,76 +23,54 @@ To fully automate the process on Arch Linux you need to:
 ## Installation ##
 
 1. Download the script
-2. Apply permission to execute:
+2. Add permission to execute:
 
 ```
 $ chmod +x /path/to/virtualhost.sh
 ```
 
-3. Optional: if you want to use the script globally, then you need to copy the file to your /usr/local/bin directory, is better
-if you copy it without the .sh extension:
+3. If you want to use the script globally, then copy the file to your /usr/local/bin directory,
+(you can copy it without the .sh extension):
 
 ```bash
 $ sudo cp /path/to/virtualhost.sh /usr/local/bin/virtualhost
 ```
 
-### For Global Shortcut ###
-
-```bash
-$ cd /usr/local/bin
-$ wget -O virtualhost https://raw.githubusercontent.com/zahedulhossain/virtualhost/master/virtualhost.sh
-$ chmod +x virtualhost
-$ wget -O virtualhost-nginx https://raw.githubusercontent.com/zahedulhossain/virtualhost/master/virtualhost-nginx.sh
-$ chmod +x virtualhost-nginx
-```
 
 ## Usage ##
 
 Basic command line syntax:
 
 ```bash
-$ sudo sh /path/to/virtualhost.sh [create | delete] [domain] [optional host_dir]
+$ sudo sh /path/to/virtualhost.sh [--create | --delete] [domain] [optional host_dir]
 ```
 
 With script installed on /usr/local/bin
 
 ```bash
-$ sudo virtualhost [create | delete] [domain] [optional host_dir]
+$ sudo virtualhost [--create | --delete] [domain] [optional host_dir]
 ```
 
 ### Examples ###
 
-to create a new virtual host:
+Create a new virtual host:
 
 ```bash
-$ sudo virtualhost create mysite.lan
+$ sudo virtualhost --create app.test
 ```
-to create a new virtual host with custom directory name:
+Create a new virtual host with custom directory name:
 
 ```bash
-$ sudo virtualhost create anothersite.lan my_dir
+$ sudo virtualhost create app.test my_dir
 ```
-to delete a virtual host
+Delete a virtual host
 
 ```bash
-$ sudo virtualhost delete mysite.lan
+$ sudo virtualhost --delete app.test
 ```
 
-to delete a virtual host with custom directory name:
+Delete a virtual host with custom directory name:
 
 ```
-$ sudo virtualhost delete anothersite.lan my_dir
-```
-### Localization
-
-For Apache:
-
-```bash
-$ sudo cp /path/to/locale/<language>/virtualhost.mo /usr/share/locale/<language>/LC_MESSAGES/
-```
-
-For NGINX:
-
-```bash
-$ sudo cp /path/to/locale/<language>/virtualhost-nginx.mo /usr/share/locale/<language>/LC_MESSAGES/
+$ sudo virtualhost delete app.test my_dir
 ```
