@@ -1,24 +1,28 @@
 #!/bin/bash
-usage="usage: virtualhost [option]
+usage="usage: virtualhost <option> [...]
 
--c, --create      Create new virtualhost configurations
--d, --delete      Delete existing virtualhost configurations"
+-a,  --all         Show available virtualhosts
+-l,  --list        List enabled virtualhosts
+-e,  --enable      Enable a virtualhost
+-d,  --disable     Disable a virtualhost
+-c,  --create      Create new virtualhost configuration  
+-rm, --remove      Delete existing virtualhost configuration"
 
 ### Set default parameters
-args=("-c" '--create' '-d' '--delete') 
+args=('-a' '--all' '-l' '--list' '-e' '--enable' '-d' '--disable' '-c' '--create' '-rm' '--remove')
 action="$1"
 domain="$2"
 rootDir="$3"
-owner=$(whoami)
-email='webmaster'
-sitesEnable='/etc/httpd/conf/sites-enabled/'
-sitesAvailable='/etc/httpd/conf/sites-available/'
-userDir='/srv/http/'
+owner=$(who am i | awk '{print $1}')
+email="webmaster"
+sitesEnable="/etc/httpd/conf/sites-enabled/"
+sitesAvailable="/etc/httpd/conf/sites-available/"
+userDir="/srv/http/"
 
 
 ### don't modify from here unless you know what you are doing ####
 
-if [ "$owner" != 'root' ]; then
+if [ "$(whoami)" != "root" ]; then
   echo $"You don't have permission to run $0 as $owner, use sudo"
   exit 1;
 fi
@@ -27,6 +31,16 @@ fi
 if [[ ! " ${args[@]} " =~ " $action " ]]; then
   echo -e "$usage"
   exit 1;
+fi
+
+if [ "$action" == '-a' ] || [ "$action" == '--all' ]; then
+  echo -e $"\nAll available domains: \n"
+  ls -A1 "$sitesAvailable"
+  exit 0;
+elif [ "$action" == '-l' ] || [ "$action" == '--list' ]; then
+  echo -e $"\nAll enabled domains: \n"
+  ls -A1 "$sitesEnable"
+  exit 0;
 fi
 
 ### set domain name
@@ -42,13 +56,30 @@ fi
 
 ### if root dir starts with '/', don't use /srv/http as default starting point
 if [[ "$rootDir" =~ ^/ ]]; then
-  userDir=''
+  userDir=""
 fi
 
 rootDir=$userDir$rootDir
 domainCFG=$sitesAvailable$domain.conf
+domainCfgEnable=$sitesAvailable$domain.conf
 
-if [ "$action" == '-c' ] || [ "$action" == '--create' ]; then
+if [ "$action" == '-e' ] || [ "$action" == '--enable' ]; then
+  if [ -e "$domainCFG" ]; then
+    cp "$domainCFG" "$sitesEnable/$domain.conf"
+    echo -e $"Site enabled\n"
+  else
+    echo -e $"Site doesn't exist."
+  fi
+  exit 0;
+elif [ "$action" == '-d' ] || [ "$action" == '--disable' ]; then
+  if [ -e "$domainCfgEnable" ]; then
+    echo -e $"Site disabled\n"
+    rm -f "$sitesEnable/$domain.conf"
+  else
+    echo -e $"Site doesn't exist."
+  fi
+  exit 0;
+elif [ "$action" == '-c' ] || [ "$action" == '--create' ]; then
   ### check if domain config already exists
   if [ -e "$domainCFG" ]; then
     echo -e $"\nDomain config already exists in $sitesAvailable \n"
@@ -57,19 +88,42 @@ if [ "$action" == '-c' ] || [ "$action" == '--create' ]; then
     exit;
   fi
 
+  ### check if it's for laravel application
+  echo -e $"Is it for Laravel application ? (y/n)"
+  read -r answer
+
+  if [ "$answer" == 'y' ] || [ "$answer" == 'Y' ]; then
+    ### Delete the directory
+    public="/public"
+  else
+    public=""
+  fi
+
   ### check if directory exists or not
   if ! [ -d "$rootDir" ]; then
     ### create the directory
     echo -e $"\nCreated $rootDir"
-    mkdir "$rootDir"
+    mkdir  -p "$rootDir$public"
     ### give permission to root dir
     chmod 755 "$rootDir"
-    ### write test file in the new domain dir
-    if ! echo "<?php echo phpinfo(); ?>" > "$rootDir"/info.php; then
-      echo $"ERROR: Not able to write in file $rootDir/info.php. Please check permissions"
-      exit;
-    else
-      echo -e $"\nAdded example content to $rootDir/info.php"
+
+    ### add test file in the new domain dir
+    echo -e $"Need example index file ? (y/n)"
+    read -r answer
+    if [ "$answer" == 'y' ] || [ "$answer" == 'Y' ]; then
+      if ! echo "<?php echo phpinfo(); ?>" > "$rootDir$public"/index.php; then
+        echo $"ERROR: Not able to write in file $rootDir$public/index.php. Check permissions"
+        exit;
+      else
+        echo -e $"\nAdded example content to $rootDir$public/index.php"
+      fi
+    fi
+
+    ### update ownership
+    if [ "$owner" == "" ]; then
+			chown -R $(whoami):$(whoami) $rootDir
+		else
+      chown -R "$owner":"$owner" "$rootDir"
     fi
   fi
 
@@ -79,12 +133,12 @@ configTemplate="
     ServerAdmin $email@$domain
     ServerName $domain
     ServerAlias $domain
-    DocumentRoot $rootDir
+    DocumentRoot $rootDir$public
 
-    <Directory $rootDir>
-        Options Indexes FollowSymLinks MultiViews
-        AllowOverride all
-        Require all granted
+    <Directory $rootDir$public>
+      Options Indexes FollowSymLinks MultiViews
+      AllowOverride all
+      Require all granted
     </Directory>
     ErrorLog /var/log/httpd/$domain-error.log
     LogLevel error
@@ -105,9 +159,6 @@ configTemplate="
   else
     echo -e $"Hostname added to /etc/hosts file \n"
   fi
-
-  ### set ownership
-  chown -R "$owner":"$owner" "$rootDir"
 
   ### enable website
   echo -e $"Site enabled\n"
