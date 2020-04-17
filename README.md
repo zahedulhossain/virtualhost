@@ -13,9 +13,9 @@ Bash Script to create or delete apache/nginx virtual hosts on Arch Linux.
 ## Prerequisite ##
 
 To fully automate the process on Arch Linux you need to:
-1. Create a sites-enabled/ and sites-available/ directory under /etc/httpd/conf/
+1. Create a `sites-enabled/` and `sites-available/` directory under `/etc/httpd/conf/`
 2. Add this line at the bottom of /etc/httpd/conf/httpd.conf file 
-```bash
+```
 'Include conf/sites-enabled/*.conf'
 ```
 
@@ -61,7 +61,7 @@ $ sudo virtualhost --create app.test
 Create a new virtual host with custom directory name:
 
 ```bash
-$ sudo virtualhost create app.test my_dir
+$ sudo virtualhost create app.test custom_dir
 ```
 Delete a virtual host
 
@@ -71,6 +71,6 @@ $ sudo virtualhost --delete app.test
 
 Delete a virtual host with custom directory name:
 
-```
-$ sudo virtualhost delete app.test my_dir
+```bash
+$ sudo virtualhost delete app.test custom_dir
 ```
