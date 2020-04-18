@@ -1,14 +1,14 @@
 
 This project is forked from [RoverWire/virtualhost](https://github.com/RoverWire/virtualhost).  
 If you're on Ubuntu then definitely use Roverwire's virtualhost script.  
-I forked this to make it more usable for Arch Linux.
+I forked this to make it more usable for Arch Linux and added some extra option.
 
 ---
 
 Virtualhost Manager
 ===
 
-Bash Script to create or delete apache/nginx virtual hosts on Arch Linux.
+Bash Script to manage apache/nginx virtualhosts on Arch Linux.
 
 
 ## Prerequisite ##
@@ -43,35 +43,59 @@ $ sudo cp /path/to/virtualhost.sh /usr/local/bin/virtualhost
 Basic command line syntax:
 
 ```bash
-$ sudo sh /path/to/virtualhost.sh [--create | --delete] [domain] [optional host_dir]
+$ sudo sh /path/to/virtualhost.sh [create | remove] [domain] [optional host_dir]
 ```
 
 With script installed on /usr/local/bin
 
 ```bash
-$ sudo virtualhost [--create | --delete] [domain] [optional host_dir]
+$ sudo virtualhost [create | remove] [domain] [optional host_dir]
 ```
 
 ### Examples ###
 
-Create a new virtual host:
+Show all virtualhosts:
 
 ```bash
-$ sudo virtualhost --create app.test
-```
-Create a new virtual host with custom directory name:
-
-```bash
-$ sudo virtualhost --create app.test custom_dir
-```
-Delete a virtual host
-
-```bash
-$ sudo virtualhost --delete app.test
+$ sudo virtualhost all
 ```
 
-Delete a virtual host with custom directory name:
+Show all active virtualhosts:
 
 ```bash
-$ sudo virtualhost --delete app.test custom_dir
+$ sudo virtualhost list
+```
+
+Create a new virtualhost:
+
+```bash
+$ sudo virtualhost create app.test
+```
+Create a new virtualhost with custom directory name:
+
+```bash
+$ sudo virtualhost create app.test custom_dir
+```
+Delete a virtualhost
+
+```bash
+$ sudo virtualhost remove app.test
+```
+
+Delete a virtualhost with custom directory name:
+
+```bash
+$ sudo virtualhost remove app.test custom_dir
+```
+
+Enable a virtualhost:
+
+```bash
+$ sudo virtualhost enable hostname.test
+```
+
+Disable a virtualhost:
+
+```bash
+$ sudo virtualhost disable hostname.test
 ```
