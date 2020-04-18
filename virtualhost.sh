@@ -17,7 +17,7 @@ owner=$(who am i | awk '{print $1}')
 email="webmaster"
 sitesEnable="/etc/httpd/conf/sites-enabled/"
 sitesAvailable="/etc/httpd/conf/sites-available/"
-userDir="/srv/http"
+userDir="/srv/http/"
 
 
 ### don't modify from here unless you know what you are doing ####
